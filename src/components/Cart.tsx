@@ -1,6 +1,8 @@
-import React from 'react';
-import { Trash2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Trash2, Printer } from 'lucide-react';
 import { Product } from '../types';
+import { ReceiptPrinter } from '../lib/printer';
+import toast from 'react-hot-toast';
 
 interface CartProps {
   cart: Map<number, { product: Product; quantity: number }>;
@@ -9,17 +11,50 @@ interface CartProps {
 }
 
 export default function Cart({ cart, onRemoveFromCart, onCheckout }: CartProps) {
+  const [isProcessing, setIsProcessing] = useState(false);
   const cartItems = Array.from(cart.values());
   const total = cartItems.reduce(
     (sum, { product, quantity }) => sum + product.price * quantity,
     0
   );
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (cartItems.length === 0) {
       return;
     }
-    onCheckout();
+
+    setIsProcessing(true);
+
+    try {
+      // Create sale data for printing
+      const saleData = {
+        items: cartItems.map(({ product, quantity }) => ({
+          id: 0, // Temporary ID as it's not saved yet
+          sale_id: 0,
+          product_id: product.id,
+          product_name: product.name,
+          quantity,
+          price: product.price
+        })),
+        total
+      };
+
+      // Try to print receipt
+      const printer = new ReceiptPrinter();
+      await printer.printReceipt(saleData);
+
+      // Complete checkout
+      onCheckout();
+    } catch (error: any) {
+      // If it's not a printer error, show a generic error
+      if (!error.message?.includes('printer')) {
+        toast.error('Failed to process checkout');
+      }
+      // Continue with checkout even if printing fails
+      onCheckout();
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (cart.size === 0) {
@@ -62,10 +97,11 @@ export default function Cart({ cart, onRemoveFromCart, onCheckout }: CartProps) 
           </div>
           <button
             onClick={handleCheckout}
-            className="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-            disabled={cartItems.length === 0}
+            disabled={cartItems.length === 0 || isProcessing}
+            className="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            Checkout
+            <Printer size={18} />
+            {isProcessing ? 'Processing...' : 'Print & Checkout'}
           </button>
         </div>
       </div>
