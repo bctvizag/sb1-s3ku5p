@@ -1,5 +1,6 @@
 import initSqlJs from 'sql.js';
 import { useEffect, useState } from 'react';
+import { Sale, SaleItem } from '../types';
 
 let SQL: any;
 let db: any;
@@ -160,4 +161,54 @@ export const getDailySales = () => {
     total_transactions: Number(row[1]),
     total_amount: Number(row[2])
   }));
+};
+
+export const getTransactions = () => {
+  if (!db) return [];
+
+  const result = db.exec(`
+    SELECT 
+      s.id,
+      s.total,
+      s.created_at,
+      si.id as item_id,
+      si.quantity,
+      si.price,
+      si.product_id,
+      p.name as product_name
+    FROM sales s
+    LEFT JOIN sale_items si ON s.id = si.sale_id
+    LEFT JOIN products p ON si.product_id = p.id
+    ORDER BY s.created_at DESC
+  `);
+
+  if (result.length === 0) return [];
+
+  const sales = new Map<number, Sale>();
+
+  result[0].values.forEach((row: any[]) => {
+    const saleId = row[0];
+    
+    if (!sales.has(saleId)) {
+      sales.set(saleId, {
+        id: saleId,
+        total: Number(row[1]),
+        created_at: row[2],
+        items: []
+      });
+    }
+
+    const sale = sales.get(saleId)!;
+    
+    sale.items.push({
+      id: row[3],
+      sale_id: saleId,
+      product_id: row[6],
+      product_name: row[7],
+      quantity: Number(row[4]),
+      price: Number(row[5])
+    });
+  });
+
+  return Array.from(sales.values());
 };
