@@ -22,6 +22,8 @@ export default function ProductList({ products, cart, onAddToCart, onRemoveFromC
     );
   }, [products, searchQuery]);
 
+  
+
   return (
     <div className="space-y-4">
       <div className="mb-6">

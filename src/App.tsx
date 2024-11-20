@@ -26,27 +26,28 @@ function App() {
     }
   }, [isDBReady]);
 
-  const loadProducts = () => {
+  const loadProducts = async () => {
     try {
-      const productList = getProducts();
+      const productList = await getProducts();
       setProducts(productList);
     } catch (error) {
       toast.error('Failed to load products');
     }
   };
 
-  const loadDailySummary = () => {
+  const loadDailySummary = async () => {
     try {
-      const summary = getDailySales()[0] || { total_amount: 0, total_transactions: 0 };
+      const summaryList = await getDailySales();
+      const summary = summaryList[0] || { total_amount: 0, total_transactions: 0 };
       setDailySummary(summary);
     } catch (error) {
       toast.error('Failed to load daily summary');
     }
   };
 
-  const loadTransactions = () => {
+  const loadTransactions = async () => {
     try {
-      const transactionList = getTransactions();
+      const transactionList = await getTransactions();
       setTransactions(transactionList);
     } catch (error) {
       toast.error('Failed to load transactions');
@@ -90,7 +91,7 @@ function App() {
     setCart(newCart);
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (cart.size === 0) {
       toast.error('Cart is empty');
       return;
@@ -108,11 +109,11 @@ function App() {
     }));
 
     try {
-      addSale(total, items);
+      await addSale(total, items);
       setCart(new Map());
-      loadProducts();
-      loadDailySummary();
-      loadTransactions();
+      await loadProducts();
+      await loadDailySummary();
+      await loadTransactions();
       toast.success('Sale completed successfully!');
     } catch (error) {
       console.error('Checkout error:', error);
